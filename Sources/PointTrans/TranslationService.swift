@@ -4,9 +4,64 @@ class TranslationService {
     
     static let shared = TranslationService()
     
-    private init() {}
+    private var localDict: [String: [String: String]] = [:]
     
-    /// Translates a word using Google Translate (instant web API) with customizable direction and API mirror.
+    private init() {
+        loadLocalDictionary()
+    }
+    
+    /// Loads the local fallback dictionary from the App Bundle Resources
+    private func loadLocalDictionary() {
+        guard let url = Bundle.main.url(forResource: "local_dict", withExtension: "json") else {
+            print("[TranslationService] Warning: local_dict.json not found in App Bundle Resources.")
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            if let dict = try JSONSerialization.jsonObject(with: data) as? [String: [String: String]] {
+                self.localDict = dict
+                print("[TranslationService] Loaded local dictionary with \(dict["en_to_zh"]?.count ?? 0) EN and \(dict["zh_to_en"]?.count ?? 0) ZH words.")
+            }
+        } catch {
+            print("[TranslationService] Error loading local dictionary: \(error)")
+        }
+    }
+    
+    /// Fallback dictionary lookup. Supports exact matching, English prefixes, and Chinese character substring contains.
+    private func lookupLocal(word: String, direction: String) -> String? {
+        let cleanedWord = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let dictKey = direction == "zh-to-en" ? "zh_to_en" : "en_to_zh"
+        
+        guard let subDict = localDict[dictKey], !subDict.isEmpty else { return nil }
+        
+        // 1. Exact Match
+        if let translation = subDict[cleanedWord] {
+            return translation
+        }
+        
+        // 2. Fuzzy / Morphological Match
+        if direction == "en-to-zh" {
+            for (key, val) in subDict {
+                // If hovered word starts with key (e.g. "setting" -> "settings") or vice-versa
+                if cleanedWord.hasPrefix(key) || key.hasPrefix(cleanedWord) {
+                    return val
+                }
+            }
+        } else {
+            for (key, val) in subDict {
+                // Chinese character subset match
+                if key.contains(cleanedWord) || cleanedWord.contains(key) {
+                    return val
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    /// Translates a word using Google Translate (instant web API).
+    /// If request fails due to network/firewall blocks, falls back to the local offline dictionary.
     func translateWithGoogle(word: String, direction: String) async -> String? {
         let trimmedWord = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedWord.isEmpty else { return nil }
@@ -14,30 +69,15 @@ class TranslationService {
         let sl = direction == "zh-to-en" ? "zh-CN" : "en"
         let tl = direction == "zh-to-en" ? "en" : "zh-CN"
         
-        // Read custom mirror from settings (helpful for mainland China users without proxy)
-        var mirror = UserDefaults.standard.string(forKey: "googleMirrorUrl") ?? ""
-        mirror = mirror.trimmingCharacters(in: .whitespacesAndNewlines)
-        if mirror.isEmpty {
-            mirror = "https://translate.googleapis.com"
-        } else {
-            // Remove trailing slash if present
-            if mirror.hasSuffix("/") {
-                mirror.removeLast()
-            }
-            // Add scheme if missing
-            if !mirror.hasPrefix("http://") && !mirror.hasPrefix("https://") {
-                mirror = "https://" + mirror
-            }
-        }
-        
+        let endpoint = "https://translate.googleapis.com"
         guard let encodedWord = trimmedWord.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(mirror)/translate_a/single?client=gtx&sl=\(sl)&tl=\(tl)&dt=t&q=\(encodedWord)") else {
+              let url = URL(string: "\(endpoint)/translate_a/single?client=gtx&sl=\(sl)&tl=\(tl)&dt=t&q=\(encodedWord)") else {
             return nil
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 5.0 // Responsive timeout
+        request.timeoutInterval = 3.0 // Low timeout for quick failover
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", forHTTPHeaderField: "User-Agent")
         
         do {
@@ -59,10 +99,16 @@ class TranslationService {
                     return fullTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
             }
-            return nil
+            throw URLError(.cannotParseResponse)
         } catch {
-            print("[TranslationService] Google Translate Error: \(error)")
-            // Provide a localization-aware network warning for timeouts
+            print("[TranslationService] Online Translate failed. Error: \(error). Falling back to local offline dictionary...")
+            
+            // Try local database lookup
+            if let localTrans = lookupLocal(word: word, direction: direction) {
+                let badge = Localization.string(for: "offline_local_badge")
+                return "\(badge) \(localTrans)"
+            }
+            
             return Localization.string(for: "net_error_google")
         }
     }
@@ -108,7 +154,7 @@ class TranslationService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 8.0
+        request.timeoutInterval = 6.0
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = httpBody
         
@@ -121,7 +167,7 @@ class TranslationService {
                 return "⚠️ Gemini API Error: \(httpResponse.statusCode)"
             }
             
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+            if let json = jsonObject(data: data),
                let candidates = json["candidates"] as? [[String: Any]],
                let firstCandidate = candidates.first,
                let content = firstCandidate["content"] as? [String: Any],
@@ -133,7 +179,7 @@ class TranslationService {
             return "⚠️ Gemini response format error"
         } catch {
             print("[TranslationService] Gemini network error: \(error)")
-            return "⚠️ Gemini connection timeout / block"
+            return "⚠️ Gemini offline / timeout"
         }
     }
     
@@ -160,7 +206,7 @@ class TranslationService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 8.0
+        request.timeoutInterval = 6.0
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = httpBody
@@ -174,7 +220,7 @@ class TranslationService {
                 return "⚠️ API Error: \(httpResponse.statusCode)"
             }
             
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+            if let json = jsonObject(data: data),
                let choices = json["choices"] as? [[String: Any]],
                let firstChoice = choices.first,
                let message = firstChoice["message"] as? [String: Any],
@@ -184,7 +230,11 @@ class TranslationService {
             return "⚠️ API response format error"
         } catch {
             print("[TranslationService] OpenAI network error: \(error)")
-            return "⚠️ API connection timeout / block"
+            return "⚠️ API offline / timeout"
         }
+    }
+    
+    private func jsonObject(data: Data) -> [String: Any]? {
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 }

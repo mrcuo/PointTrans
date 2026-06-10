@@ -12,7 +12,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "PointTrans",
-            path: "Sources/PointTrans"
+            path: "Sources/PointTrans",
+            exclude: ["local_dict.json"]
         )
     ]
 )

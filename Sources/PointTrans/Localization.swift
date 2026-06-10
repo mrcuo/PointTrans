@@ -2,10 +2,17 @@ import Foundation
 
 struct Localization {
     
-    /// Returns the localized string for a key based on the user's system language preference.
+    /// Returns the localized string for a key based on the user's selected language preference.
     static func string(for key: String) -> String {
-        let preferredLang = Locale.preferredLanguages.first?.lowercased() ?? "en"
-        let lang = preferredLang.hasPrefix("zh") ? "zh" : "en"
+        let selected = UserDefaults.standard.string(forKey: "appLanguage") ?? "auto"
+        let lang: String
+        
+        if selected == "auto" {
+            let preferredLang = Locale.preferredLanguages.first?.lowercased() ?? "en"
+            lang = preferredLang.hasPrefix("zh") ? "zh" : "en"
+        } else {
+            lang = selected
+        }
         
         let localizations: [String: [String: String]] = [
             "app_name": ["zh": "光标翻译", "en": "PointTrans"],
@@ -26,12 +33,18 @@ struct Localization {
             "settings_title": ["zh": "设置 - PointTrans", "en": "Settings - PointTrans"],
             "tab_general": ["zh": "常规", "en": "General"],
             "tab_ai": ["zh": "AI 翻译", "en": "AI Translation"],
+            "tab_offline": ["zh": "离线词包", "en": "Offline Dict"],
             "tab_permissions": ["zh": "系统权限", "en": "Permissions"],
             
             "general_enable": ["zh": "开启翻译功能", "en": "Enable Translation"],
             "general_trigger": ["zh": "触发设置", "en": "Trigger Settings"],
             "general_key": ["zh": "触发修饰键", "en": "Trigger Modifier Key"],
             "general_delay": ["zh": "鼠标悬停延迟", "en": "Hover Delay"],
+            "general_language": ["zh": "界面语言", "en": "App Language"],
+            
+            "lang_auto": ["zh": "自动 (跟随系统)", "en": "Auto (System Default)"],
+            "lang_zh": ["zh": "简体中文", "en": "简体中文"],
+            "lang_en": ["zh": "English", "en": "English"],
             
             "ai_section": ["zh": "AI 语境配置", "en": "AI Context Configurations"],
             "ai_enable": ["zh": "启用 AI 语境翻译 (深度解析)", "en": "Enable AI Context Translation"],
@@ -40,9 +53,12 @@ struct Localization {
             "ai_endpoint": ["zh": "API 节点 (Endpoint)", "en": "API Endpoint"],
             "ai_key_warning": ["zh": "⚠️ 请在设置中配置 API Key", "en": "⚠️ Please configure API Key in settings"],
             
-            // Google Translate configuration
-            "google_section": ["zh": "Google 翻译配置", "en": "Google Translate Configurations"],
-            "google_mirror": ["zh": "API 镜像源 (可选)", "en": "API Mirror URL (Optional)"],
+            // Offline dict configuration
+            "offline_title": ["zh": "离线词包设置", "en": "Offline Dictionary Settings"],
+            "offline_desc": ["zh": "PointTrans 默认内置了基础常用离线词包。当您处于离线环境、或者因网络问题（如中国区谷歌接口限制）导致在线翻译超时，软件会自动匹配本地词典进行翻译，保障使用连贯性。", "en": "PointTrans bundles a basic offline dictionary. When you are offline or online requests fail, the app automatically falls back to local database lookups for consistent usability."],
+            "offline_status": ["zh": "当前词包：已启用内置基础离线词包 (~10,000 核心词)", "en": "Current status: Built-in offline dictionary active (~10,000 words)"],
+            "offline_btn_download": ["zh": "获取完整离线包 (敬请期待)", "en": "Download full offline package (Coming soon)"],
+            "offline_local_badge": ["zh": "[本地离线]", "en": "[Offline]"],
             
             // Permissions
             "permission_title": ["zh": "权限设置", "en": "Permission Settings"],
@@ -54,7 +70,7 @@ struct Localization {
             "permission_tip": ["zh": "💡 提示：在弹出系统对话框时，请选择“打开系统设置”，并勾选“PointTrans”。开启后如不能立即生效，建议重启本应用。", "en": "💡 Tip: When the system dialog prompts, click 'Open System Settings' and check 'PointTrans'. If it does not take effect immediately, please restart the app."],
             
             // Network warnings
-            "net_error_google": ["zh": "❌ 谷歌翻译请求超时。中国区用户建议在设置中配置代理或自定义镜像源。", "en": "❌ Google Translate timed out. Please check network proxy settings."]
+            "net_error_google": ["zh": "⚠️ 网络连接失败。请在设置中查看离线词包状态。", "en": "⚠️ Network error. Please check offline dictionary in Settings."]
         ]
         
         return localizations[key]?[lang] ?? key

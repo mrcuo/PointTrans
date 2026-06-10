@@ -28,9 +28,10 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-# Copy binary
+# Copy binary & resources
 cp "$BINARY_PATH" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+cp "Sources/PointTrans/local_dict.json" "${APP_BUNDLE}/Contents/Resources/local_dict.json"
 
 # Create Info.plist
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"

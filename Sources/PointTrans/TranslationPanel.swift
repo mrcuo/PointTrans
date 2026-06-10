@@ -17,25 +17,7 @@ struct VisualEffectView: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
-// MARK: - Custom Champagne Gold Loading Spinner
-struct GoldSpinner: View {
-    @State private var isAnimating = false
-    
-    var body: some View {
-        Circle()
-            .trim(from: 0, to: 0.7)
-            .stroke(Color(red: 197/255, green: 168/255, blue: 128/255), lineWidth: 1.5)
-            .frame(width: 14, height: 14)
-            .rotationEffect(Angle(degrees: isAnimating ? 360 : 0))
-            .onAppear {
-                withAnimation(Animation.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-                    self.isAnimating = true
-                }
-            }
-    }
-}
-
-// MARK: - SwiftUI Translation View (Oxford Legacy Design)
+// MARK: - SwiftUI Translation View (Lightweight macOS Look Up Style)
 struct TranslationView: View {
     let word: String
     let contextText: String
@@ -43,131 +25,71 @@ struct TranslationView: View {
     let aiTranslation: String?
     let isAIEnabled: Bool
     
-    @Environment(\.colorScheme) var colorScheme
-    
-    // Theme Colors
-    private let oxfordNavy = Color(red: 10/255, green: 25/255, blue: 47/255)
-    private let champagneGold = Color(red: 197/255, green: 168/255, blue: 128/255)
-    private let parchment = Color(red: 253/255, green: 251/255, blue: 247/255)
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Header: Word Title
-            HStack(alignment: .lastTextBaseline) {
+        VStack(alignment: .leading, spacing: 8) {
+            // Word and badge header
+            HStack(alignment: .firstTextBaseline) {
                 Text(word)
-                    .font(.custom("Georgia", size: 24))
-                    .fontWeight(.bold)
-                    .foregroundColor(colorScheme == .light ? oxfordNavy : .white)
+                    .font(.system(.headline, design: .default))
+                    .foregroundColor(.primary)
                 
                 Spacer()
                 
-                // Academic Badge
-                Text(Localization.string(for: "app_name").uppercased())
-                    .font(.custom("SFMono-Regular", size: 9))
-                    .fontWeight(.bold)
-                    .tracking(1.5)
-                    .foregroundColor(champagneGold)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(champagneGold.opacity(0.12))
-                    .cornerRadius(3)
+                Text(Localization.string(for: "app_name"))
+                    .font(.system(.caption2, design: .default))
+                    .foregroundColor(.secondary)
             }
             
-            // Double-line Divider (Classic Academic Journal Detail)
-            VStack(spacing: 1.5) {
-                Divider().background(champagneGold.opacity(0.4))
-                Divider().background(champagneGold.opacity(0.15))
-            }
+            Divider()
             
-            // Google Translation Section
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "book.closed")
-                        .foregroundColor(champagneGold)
-                        .font(.system(size: 10, weight: .bold))
-                    
-                    Text(Localization.string(for: "quick_trans").uppercased())
-                        .font(.custom("SFMono-Regular", size: 9))
-                        .fontWeight(.bold)
-                        .tracking(1.8)
-                        .foregroundColor(champagneGold)
-                }
-                
+            // Google Translation / Quick Translation
+            VStack(alignment: .leading, spacing: 2) {
                 if let gTrans = googleTranslation {
                     Text(gTrans)
-                        .font(.custom("Georgia", size: 15))
+                        .font(.system(.body, design: .default))
                         .foregroundColor(.primary)
-                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    HStack(spacing: 8) {
-                        GoldSpinner()
-                        Text("Reading...")
-                            .font(.custom("Georgia", size: 12).italic())
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 2)
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.8)
                 }
             }
             
-            // AI Context Analysis Section
+            // AI Context Translation (optional)
             if isAIEnabled {
-                VStack(spacing: 1.5) {
-                    Divider().background(champagneGold.opacity(0.25))
-                }
+                Divider()
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(champagneGold)
-                            .font(.system(size: 10, weight: .bold))
-                        
-                        Text(Localization.string(for: "ai_trans").uppercased())
-                            .font(.custom("SFMono-Regular", size: 9))
-                            .fontWeight(.bold)
-                            .tracking(1.8)
-                            .foregroundColor(champagneGold)
-                    }
-                    
+                VStack(alignment: .leading, spacing: 4) {
                     if let aiTrans = aiTranslation {
                         ScrollView(.vertical, showsIndicators: true) {
                             Text(LocalizedStringKey(aiTrans))
-                                .font(.system(size: 13, weight: .regular))
-                                .lineSpacing(4)
+                                .font(.system(.subheadline, design: .default))
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                        .frame(maxHeight: 180) // Constrain scroll height for lightness
                     } else {
-                        HStack(spacing: 8) {
-                            GoldSpinner()
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .controlSize(.small)
+                                .scaleEffect(0.8)
                             Text(Localization.string(for: "ai_loading"))
-                                .font(.custom("Georgia", size: 12).italic())
+                                .font(.system(.caption, design: .default))
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.vertical, 2)
                     }
                 }
             }
         }
-        .padding(18)
-        .frame(width: 350)
-        .background(
-            Group {
-                if colorScheme == .dark {
-                    ZStack {
-                        VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                        oxfordNavy.opacity(0.65)
-                    }
-                } else {
-                    parchment
-                }
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(12)
+        .frame(width: 300) // Compact lightweight width
+        .background(VisualEffectView(material: .hudWindow, blendingMode: .behindWindow))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(champagneGold.opacity(colorScheme == .light ? 0.7 : 0.45), lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
         )
     }
 }
@@ -181,7 +103,7 @@ class TranslationPanel: NSPanel {
     
     private init() {
         super.init(
-            contentRect: CGRect(x: 0, y: 0, width: 350, height: 280),
+            contentRect: CGRect(x: 0, y: 0, width: 300, height: 200),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -218,12 +140,12 @@ class TranslationPanel: NSPanel {
         
         // Dynamically compute layout height using SwiftUI auto layout sizing
         let fittingSize = newHostingView.fittingSize
-        let finalWidth: CGFloat = 350
+        let finalWidth: CGFloat = 300
         let finalHeight = fittingSize.height
         
         // Calculate offset position
-        let xPos = screenPoint.x + 12
-        let yPos = screenPoint.y - finalHeight - 12
+        let xPos = screenPoint.x + 10
+        let yPos = screenPoint.y - finalHeight - 10
         
         // Adjust bounds so it stays within active screen boundaries
         var finalX = xPos
@@ -233,10 +155,10 @@ class TranslationPanel: NSPanel {
             let screenFrame = activeScreen.frame
             
             if finalX + finalWidth > screenFrame.maxX {
-                finalX = screenPoint.x - finalWidth - 12
+                finalX = screenPoint.x - finalWidth - 10
             }
             if finalY < screenFrame.minY {
-                finalY = screenPoint.y + 12
+                finalY = screenPoint.y + 10
             }
         }
         
@@ -246,7 +168,7 @@ class TranslationPanel: NSPanel {
             self.alphaValue = 0
             self.orderFront(nil)
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.15
+                context.duration = 0.12
                 self.animator().alphaValue = 1.0
             }
         }
@@ -257,7 +179,7 @@ class TranslationPanel: NSPanel {
         guard self.isVisible && self.alphaValue > 0 else { return }
         
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
+            context.duration = 0.12
             self.animator().alphaValue = 0.0
         }, completionHandler: {
             self.orderOut(nil)
