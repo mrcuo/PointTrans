@@ -32,6 +32,7 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 cp "$BINARY_PATH" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "Sources/PointTrans/local_dict.json" "${APP_BUNDLE}/Contents/Resources/local_dict.json"
+cp "Sources/PointTrans/AppIcon.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
 
 # Create Info.plist
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
@@ -45,6 +46,8 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
     <string>PointTrans</string>
     <key>CFBundleDisplayName</key>
     <string>PointTrans</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
