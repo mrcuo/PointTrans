@@ -1,4 +1,5 @@
 import Cocoa
+import CoreGraphics
 
 class HotKeyHandler {
     static let shared = HotKeyHandler()
@@ -21,7 +22,7 @@ class HotKeyHandler {
     
     func startMonitoring() {
         stopMonitoring() // Avoid duplicates
-        // Check mouse status every 100ms (0.1s is responsive and light on CPU)
+        // Check mouse and key status every 100ms system-wide
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             self?.checkMouseAndKeyStatus()
         }
@@ -32,34 +33,37 @@ class HotKeyHandler {
         timer = nil
     }
     
-    private func checkMouseAndKeyStatus() {
-        let isEnabled = UserDefaults.standard.bool(forKey: "translationEnabled")
-        // Default to enabled if not set
-        if UserDefaults.standard.object(forKey: "translationEnabled") == nil {
-            UserDefaults.standard.set(true, forKey: "translationEnabled")
-        }
-        guard isEnabled || UserDefaults.standard.object(forKey: "translationEnabled") == nil else { return }
-        
-        // Read required modifier key configuration
+    /// Queries the global, system-wide hardware state of the modifier keys using CoreGraphics.
+    /// This is 100% reliable even when the application is running in the background.
+    private func isModifierKeyPressed() -> Bool {
         let modifierName = UserDefaults.standard.string(forKey: "modifierKey") ?? "command"
-        let requiredFlag: NSEvent.ModifierFlags
         
         switch modifierName.lowercased() {
         case "option":
-            requiredFlag = .option
+            // Virtual Key Codes for Option: 58 (Left Option), 61 (Right Option)
+            return CGEventSource.keyState(.combinedSessionState, key: 58) ||
+                   CGEventSource.keyState(.combinedSessionState, key: 61)
         case "control":
-            requiredFlag = .control
+            // Virtual Key Codes for Control: 59 (Left Control), 62 (Right Control)
+            return CGEventSource.keyState(.combinedSessionState, key: 59) ||
+                   CGEventSource.keyState(.combinedSessionState, key: 62)
         case "shift":
-            requiredFlag = .shift
+            // Virtual Key Codes for Shift: 56 (Left Shift), 60 (Right Shift)
+            return CGEventSource.keyState(.combinedSessionState, key: 56) ||
+                   CGEventSource.keyState(.combinedSessionState, key: 60)
         default:
-            requiredFlag = .command
+            // Default: command
+            // Virtual Key Codes for Command: 55 (Left Command), 54 (Right Command)
+            return CGEventSource.keyState(.combinedSessionState, key: 55) ||
+                   CGEventSource.keyState(.combinedSessionState, key: 54)
         }
+    }
+    
+    private func checkMouseAndKeyStatus() {
+        let isEnabled = UserDefaults.standard.bool(forKey: "translationEnabled")
+        guard isEnabled else { return }
         
-        // Query system-wide modifier key flags globally
-        let currentFlags = NSEvent.modifierFlags
-        let isModifierPressed = currentFlags.contains(requiredFlag)
-        
-        // Query global mouse coordinates
+        let isModifierPressed = isModifierKeyPressed()
         let currentMouseLoc = NSEvent.mouseLocation
         
         if isModifierPressed {
@@ -94,6 +98,8 @@ class HotKeyHandler {
             if hoverDuration > 0 {
                 hoverDuration = 0.0
             }
+            // Reset translation location on key release so the user can immediately re-translate the same word
+            lastTranslatedLocation = .zero
             onModifierReleased?()
         }
         
