@@ -57,11 +57,10 @@ struct SettingsView: View {
                 }
                 
                 Section {
-                    TextField(Localization.string(for: "google_mirror"), text: $googleMirrorUrl)
-                        .textFieldStyle(.roundedBorder)
-                        .placeholder(when: googleMirrorUrl.isEmpty) {
-                            Text("https://translate.googleapis.com").foregroundColor(.secondary)
-                        }
+                    LabeledContent(Localization.string(for: "google_mirror")) {
+                        TextField("https://translate.googleapis.com", text: $googleMirrorUrl)
+                            .textFieldStyle(.roundedBorder)
+                    }
                 } header: {
                     Text(Localization.string(for: "google_section"))
                         .font(.headline)
@@ -184,19 +183,7 @@ struct SettingsView: View {
     }
 }
 
-// Extension to support placeholders in TextFields
-extension View {
-    func placeholder<Content: View>(
-        when shouldShow: Bool,
-        alignment: Alignment = .leading,
-        @ViewBuilder placeholder: () -> Content) -> some View {
 
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0).padding(.leading, 4)
-            self
-        }
-    }
-}
 
 // MARK: - Window Manager helper
 class SettingsWindowManager {
