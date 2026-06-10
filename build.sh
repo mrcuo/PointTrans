@@ -1,0 +1,68 @@
+#!/bin/bash
+set -e
+
+# Define directories
+APP_NAME="PointTrans"
+APP_BUNDLE="${APP_NAME}.app"
+BUILD_DIR=".build"
+
+echo "=== Building ${APP_NAME} ==="
+
+# Build the executable using Swift PM
+swift build -c release
+
+# Find the binary
+BINARY_PATH=$(swift build -c release --show-bin-path)/${APP_NAME}
+
+if [ ! -f "$BINARY_PATH" ]; then
+    echo "Error: Binary not found at $BINARY_PATH"
+    exit 1
+fi
+
+echo "=== Packaging as ${APP_BUNDLE} ==="
+
+# Clean existing app bundle
+rm -rf "$APP_BUNDLE"
+
+# Create directories
+mkdir -p "${APP_BUNDLE}/Contents/MacOS"
+mkdir -p "${APP_BUNDLE}/Contents/Resources"
+
+# Copy binary
+cp "$BINARY_PATH" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+
+# Create Info.plist
+cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.tailcasso.PointTrans</string>
+    <key>CFBundleName</key>
+    <string>PointTrans</string>
+    <key>CFBundleDisplayName</key>
+    <string>PointTrans</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleExecutable</key>
+    <string>PointTrans</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>PointTrans requires screen recording permission to capture text under the cursor. / PointTrans需要屏幕录制权限以识别鼠标光标处的单词。</string>
+</dict>
+</plist>
+EOF
+
+echo "=== Build Successful! ==="
+echo "You can run the application with: open ${APP_BUNDLE}"
