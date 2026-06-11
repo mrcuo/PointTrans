@@ -19,21 +19,24 @@ struct Localization {
             "quick_trans": ["zh": "快速翻译", "en": "Quick Translation"],
             "ai_trans": ["zh": "AI 语境深度解析", "en": "AI Context Analysis"],
             "ai_loading": ["zh": "正在分析语境中...", "en": "Analyzing context..."],
+            "loading_translating": ["zh": "正在翻译...", "en": "Translating..."],
+            "loading_ai": ["zh": "正在翻译及分析语境...", "en": "Translating & analyzing context..."],
             "no_permission": ["zh": "未启用屏幕录制权限", "en": "Screen Recording Permission Disabled"],
             "no_permission_desc": ["zh": "PointTrans 需要屏幕录制权限来识别屏幕上的单词。\n请点击菜单栏图标 -> 设置 -> 系统权限 选项卡，按提示授予权限。", "en": "PointTrans requires screen recording permission to parse words on the screen.\nPlease click the menu bar icon -> Settings -> System Permissions, and grant permission."],
             
             // Menu Items
             "menu_enable": ["zh": "启用翻译功能", "en": "Enable Translation"],
-            "menu_mode_en_zh": ["zh": "翻译模式：英译中", "en": "Mode: English to Chinese"],
-            "menu_mode_zh_en": ["zh": "翻译模式：中译英", "en": "Mode: Chinese to English"],
+            "menu_mode_direction": ["zh": "翻译方向", "en": "Translation Direction"],
+            "menu_mode_en_zh_short": ["zh": "英语 → 中文", "en": "English → Chinese"],
+            "menu_mode_zh_en_short": ["zh": "中文 → 英语", "en": "Chinese → English"],
             "menu_settings": ["zh": "设置...", "en": "Settings..."],
+            "menu_about": ["zh": "关于 PointTrans", "en": "About PointTrans"],
             "menu_quit": ["zh": "退出", "en": "Quit"],
             
             // Settings Window
             "settings_title": ["zh": "设置 - PointTrans", "en": "Settings - PointTrans"],
             "tab_general": ["zh": "常规", "en": "General"],
             "tab_ai": ["zh": "AI 翻译", "en": "AI Translation"],
-            "tab_offline": ["zh": "离线词包", "en": "Offline Dict"],
             "tab_permissions": ["zh": "系统权限", "en": "Permissions"],
             
             "general_enable": ["zh": "开启翻译功能", "en": "Enable Translation"],
@@ -53,11 +56,7 @@ struct Localization {
             "ai_endpoint": ["zh": "API 节点 (Endpoint)", "en": "API Endpoint"],
             "ai_key_warning": ["zh": "⚠️ 请在设置中配置 API Key", "en": "⚠️ Please configure API Key in settings"],
             
-            // Offline dict configuration
-            "offline_title": ["zh": "离线词包设置", "en": "Offline Dictionary Settings"],
-            "offline_desc": ["zh": "PointTrans 默认内置了基础常用离线词包。当您处于离线环境、或者因网络问题（如中国区谷歌接口限制）导致在线翻译超时，软件会自动匹配本地词典进行翻译，保障使用连贯性。", "en": "PointTrans bundles a basic offline dictionary. When you are offline or online requests fail, the app automatically falls back to local database lookups for consistent usability."],
-            "offline_status": ["zh": "当前词包：已启用内置基础离线词包 (~10,000 核心词)", "en": "Current status: Built-in offline dictionary active (~10,000 words)"],
-            "offline_btn_download": ["zh": "获取完整离线包 (敬请期待)", "en": "Download full offline package (Coming soon)"],
+            // Offline dictionary
             "offline_local_badge": ["zh": "[本地离线]", "en": "[Offline]"],
             
             // Permissions
@@ -67,7 +66,7 @@ struct Localization {
             "permission_not_granted": ["zh": "未获得权限", "en": "Permission not granted"],
             "permission_btn_request": ["zh": "点击申请屏幕录制权限", "en": "Click to request permission"],
             "permission_btn_check": ["zh": "重新检查权限状态", "en": "Re-check permission status"],
-            "permission_tip": ["zh": "💡 提示：在弹出系统对话框时，请选择“打开系统设置”，并勾选“PointTrans”。开启后如不能立即生效，建议重启本应用。", "en": "💡 Tip: When the system dialog prompts, click 'Open System Settings' and check 'PointTrans'. If it does not take effect immediately, please restart the app."],
+            "permission_tip": ["zh": "💡 提示：在弹出系统对话框时，请选择\u{201C}打开系统设置\u{201D}，并勾选\u{201C}PointTrans\u{201D}。开启后如不能立即生效，建议重启本应用。", "en": "💡 Tip: When the system dialog prompts, click 'Open System Settings' and check 'PointTrans'. If it does not take effect immediately, please restart the app."],
             
             // Network warnings
             "net_error_google": ["zh": "⚠️ 网络连接失败。请在设置中查看离线词包状态。", "en": "⚠️ Network error. Please check offline dictionary in Settings."]

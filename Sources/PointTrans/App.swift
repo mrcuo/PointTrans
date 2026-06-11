@@ -16,8 +16,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     var statusItem: NSStatusItem?
     var enableMenuItem: NSMenuItem?
+    var modeSubmenu: NSMenu?
     var modeEnZhItem: NSMenuItem?
     var modeZhEnItem: NSMenuItem?
+    var modeSubmenuItem: NSMenuItem?
+    var settingsMenuItem: NSMenuItem?
+    var aboutMenuItem: NSMenuItem?
+    var quitMenuItem: NSMenuItem?
+    private var isShowingAlert = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize default settings if not already set
@@ -41,7 +47,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             "modifierKey": "command",
             "hoverDelay": 0.3,
             "translationMode": defaultMode,
-            "googleMirrorUrl": "",
             "aiEnabled": false,
             "aiProvider": "gemini",
             "geminiModel": "gemini-1.5-flash",
@@ -53,9 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "translate", accessibilityDescription: Localization.string(for: "app_name"))
-        }
+        updateStatusItemButton()
         
         let menu = NSMenu()
         menu.delegate = self
@@ -68,29 +71,46 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        // 2. English -> Chinese translation mode
-        let modeEnZh = NSMenuItem(title: Localization.string(for: "menu_mode_en_zh"), action: #selector(setModeEnZh), keyEquivalent: "")
+        // 2. Translation direction submenu
+        let submenuItem = NSMenuItem(title: Localization.string(for: "menu_mode_direction"), action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        
+        let modeEnZh = NSMenuItem(title: Localization.string(for: "menu_mode_en_zh_short"), action: #selector(setModeEnZh), keyEquivalent: "")
         modeEnZh.target = self
-        menu.addItem(modeEnZh)
+        submenu.addItem(modeEnZh)
         self.modeEnZhItem = modeEnZh
         
-        // 3. Chinese -> English translation mode
-        let modeZhEn = NSMenuItem(title: Localization.string(for: "menu_mode_zh_en"), action: #selector(setModeZhEn), keyEquivalent: "")
+        let modeZhEn = NSMenuItem(title: Localization.string(for: "menu_mode_zh_en_short"), action: #selector(setModeZhEn), keyEquivalent: "")
         modeZhEn.target = self
-        menu.addItem(modeZhEn)
+        submenu.addItem(modeZhEn)
         self.modeZhEnItem = modeZhEn
+        
+        submenuItem.submenu = submenu
+        menu.addItem(submenuItem)
+        self.modeSubmenuItem = submenuItem
+        self.modeSubmenu = submenu
         
         menu.addItem(NSMenuItem.separator())
         
-        // 4. Settings Window
+        // 3. Settings Window
         let settingsItem = NSMenuItem(title: Localization.string(for: "menu_settings"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+        self.settingsMenuItem = settingsItem
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 4. About
+        let aboutItem = NSMenuItem(title: Localization.string(for: "menu_about"), action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+        self.aboutMenuItem = aboutItem
         
         // 5. Quit App
         let quitItem = NSMenuItem(title: Localization.string(for: "menu_quit"), action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
+        self.quitMenuItem = quitItem
         
         statusItem?.menu = menu
     }
@@ -98,10 +118,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         let isEnabled = UserDefaults.standard.bool(forKey: "translationEnabled")
         enableMenuItem?.state = isEnabled ? .on : .off
+        enableMenuItem?.title = Localization.string(for: "menu_enable")
         
         let mode = UserDefaults.standard.string(forKey: "translationMode") ?? "en-to-zh"
         modeEnZhItem?.state = mode == "en-to-zh" ? .on : .off
+        modeEnZhItem?.title = Localization.string(for: "menu_mode_en_zh_short")
+        
         modeZhEnItem?.state = mode == "zh-to-en" ? .on : .off
+        modeZhEnItem?.title = Localization.string(for: "menu_mode_zh_en_short")
+        
+        modeSubmenuItem?.title = Localization.string(for: "menu_mode_direction")
+        settingsMenuItem?.title = Localization.string(for: "menu_settings")
+        aboutMenuItem?.title = Localization.string(for: "menu_about")
+        quitMenuItem?.title = Localization.string(for: "menu_quit")
+        
+        updateStatusItemButton()
+    }
+    
+    private func updateStatusItemButton() {
+        if let button = statusItem?.button {
+            button.image = nil
+            let appLang = UserDefaults.standard.string(forKey: "appLanguage") ?? "auto"
+            let isZh: Bool
+            if appLang == "auto" {
+                isZh = (Locale.preferredLanguages.first?.lowercased().hasPrefix("zh") ?? false)
+            } else {
+                isZh = (appLang == "zh")
+            }
+            button.title = isZh ? "译" : "PT"
+            button.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
+        }
     }
     
     @objc private func toggleTranslation() {
@@ -127,6 +173,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         SettingsWindowManager.shared.show()
     }
     
+    @objc private func showAbout() {
+        let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        
+        let alert = NSAlert()
+        alert.messageText = "PointTrans"
+        alert.informativeText = "\(Localization.string(for: "app_name"))\nVersion \(versionString)\n\n© 2024 Tailcasso"
+        alert.alertStyle = .informational
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+    
     @objc private func quitApp() {
         TranslationPanel.shared.dismiss()
         HotKeyHandler.shared.stopMonitoring()
@@ -146,14 +204,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Dismiss panel if mouse moves
         HotKeyHandler.shared.onMouseMoved = {
             DispatchQueue.main.async {
-                TranslationPanel.shared.dismiss()
+                TranslationPanel.shared.requestDismiss()
             }
         }
         
         // Dismiss panel if modifier key is released
         HotKeyHandler.shared.onModifierReleased = {
             DispatchQueue.main.async {
-                TranslationPanel.shared.dismiss()
+                TranslationPanel.shared.requestDismiss()
             }
         }
     }
@@ -164,14 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         // 1. Check Screen Recording permissions
         if !CGPreflightScreenCaptureAccess() {
-            TranslationPanel.shared.show(
-                at: mousePoint,
-                word: Localization.string(for: "no_permission"),
-                context: "",
-                googleResult: Localization.string(for: "no_permission_desc"),
-                aiResult: nil,
-                aiEnabled: false
-            )
+            showPermissionAlert()
             return
         }
         
@@ -228,5 +279,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
         }
+    }
+    
+    private func showPermissionAlert() {
+        guard !isShowingAlert else { return }
+        isShowingAlert = true
+        
+        // Use CGRequestScreenCaptureAccess() to trigger the native macOS permission dialog.
+        // This properly registers the app in System Settings > Privacy > Screen Recording.
+        let granted = CGRequestScreenCaptureAccess()
+        
+        if !granted {
+            // If not granted, show a follow-up alert with instructions
+            let alert = NSAlert()
+            alert.messageText = Localization.string(for: "no_permission")
+            alert.informativeText = Localization.string(for: "no_permission_desc")
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: Localization.string(for: "menu_quit"))
+            
+            let response = alert.runModal()
+            if response == .alertSecondButtonReturn {
+                NSApp.terminate(nil)
+            }
+        }
+        
+        isShowingAlert = false
     }
 }

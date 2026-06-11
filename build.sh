@@ -68,5 +68,9 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
 </plist>
 EOF
 
+# Ad-hoc code sign so macOS registers the app for privacy permissions (Screen Recording)
+echo "=== Code Signing (ad-hoc) ==="
+codesign --force --deep --sign - "${APP_BUNDLE}"
+
 echo "=== Build Successful! ==="
 echo "You can run the application with: open ${APP_BUNDLE}"

@@ -9,11 +9,6 @@ struct ExtractedText {
 
 class TextExtractor {
     
-    /// Requests screen capture permissions (standard macOS API)
-    static func requestPermissions() -> Bool {
-        return CGRequestScreenCaptureAccess()
-    }
-    
     /// Extracts the word (English or Chinese depending on translation mode) directly under the mouse cursor,
     /// along with its containing line/sentence as context.
     static func extractWordAtCursor(mode: String) -> ExtractedText? {
@@ -144,7 +139,9 @@ class TextExtractor {
                 }
             } else {
                 // English-to-Chinese: Filter characters to make sure it is English
-                let cleanedWord = word.trimmingCharacters(in: CharacterSet.letters.inverted)
+                // Preserve hyphens and apostrophes within words (e.g. "wi-fi", "don't")
+                let allowedChars = CharacterSet.letters.union(CharacterSet(charactersIn: "-'"))
+                let cleanedWord = word.trimmingCharacters(in: allowedChars.inverted)
                 if !cleanedWord.isEmpty && isEnglishWord(cleanedWord) {
                     return ExtractedText(word: cleanedWord, context: bestContext ?? word)
                 }
@@ -154,9 +151,10 @@ class TextExtractor {
         return nil
     }
 
-    /// Check if the word is composed of English alphabetical characters.
+    /// Check if the word is composed of English alphabetical characters (allowing hyphens and apostrophes within).
     private static func isEnglishWord(_ word: String) -> Bool {
-        let pattern = "^[a-zA-Z]+[a-zA-Z'-]*$"
+        // Must start and end with a letter, may contain hyphens/apostrophes in the middle
+        let pattern = "^[a-zA-Z]+(['-][a-zA-Z]+)*$"
         return word.range(of: pattern, options: .regularExpression) != nil
     }
     
@@ -193,8 +191,50 @@ class TextExtractor {
                     words.append((word: word, range: range))
                 }
             }
+            
+            // Merge adjacent words connected by hyphens (e.g. "wi" + "fi" → "wi-fi")
+            words = mergeHyphenatedWords(words, in: text)
         }
         
         return words
+    }
+    
+    /// Merges adjacent tokenized words that are connected by hyphens in the original text.
+    /// e.g. ["wi", "fi"] in "wi-fi" → ["wi-fi"]
+    /// e.g. ["state", "of", "the", "art"] in "state-of-the-art" → ["state-of-the-art"]
+    private static func mergeHyphenatedWords(_ words: [(word: String, range: Range<String.Index>)], in text: String) -> [(word: String, range: Range<String.Index>)] {
+        guard words.count > 1 else { return words }
+        
+        var merged: [(word: String, range: Range<String.Index>)] = []
+        var i = 0
+        
+        while i < words.count {
+            var currentWord = words[i].word
+            var currentRange = words[i].range
+            
+            // Look ahead: check if the next word is connected by a hyphen
+            while i + 1 < words.count {
+                let gapStart = currentRange.upperBound
+                let gapEnd = words[i + 1].range.lowerBound
+                
+                // Check if the text between current and next word is exactly a hyphen
+                if gapStart < gapEnd {
+                    let gap = String(text[gapStart..<gapEnd])
+                    if gap == "-" {
+                        // Merge: "wi" + "-" + "fi" → "wi-fi"
+                        currentWord += "-" + words[i + 1].word
+                        currentRange = currentRange.lowerBound..<words[i + 1].range.upperBound
+                        i += 1
+                        continue
+                    }
+                }
+                break
+            }
+            
+            merged.append((word: currentWord, range: currentRange))
+            i += 1
+        }
+        
+        return merged
     }
 }

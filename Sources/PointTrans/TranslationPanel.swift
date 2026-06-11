@@ -42,44 +42,52 @@ struct TranslationView: View {
             
             Divider()
             
-            // Google Translation / Quick Translation
-            VStack(alignment: .leading, spacing: 2) {
-                if let gTrans = googleTranslation {
-                    Text(gTrans)
+            // Merged Translation Content Box
+            VStack(alignment: .leading, spacing: 8) {
+                if let google = googleTranslation {
+                    // Display Google result
+                    Text(google)
                         .font(.system(.body, design: .default))
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.8)
-                }
-            }
-            
-            // AI Context Translation (optional)
-            if isAIEnabled {
-                Divider()
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    if let aiTrans = aiTranslation {
-                        ScrollView(.vertical, showsIndicators: true) {
-                            Text(LocalizedStringKey(aiTrans))
-                                .font(.system(.subheadline, design: .default))
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxHeight: 180) // Constrain scroll height for lightness
-                    } else {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .controlSize(.small)
-                                .scaleEffect(0.8)
-                            Text(Localization.string(for: "ai_loading"))
-                                .font(.system(.caption, design: .default))
-                                .foregroundColor(.secondary)
+                    
+                    if isAIEnabled {
+                        if let ai = aiTranslation {
+                            Divider()
+                                .opacity(0.5)
+                            
+                            ScrollView(.vertical, showsIndicators: true) {
+                                Text(LocalizedStringKey(ai))
+                                    .font(.system(.subheadline, design: .default))
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxHeight: 180) // Constrain scroll height for lightness
+                        } else {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .scaleEffect(0.7)
+                                Text(Localization.string(for: "ai_loading"))
+                                    .font(.system(.caption, design: .default))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 4)
                         }
                     }
+                } else {
+                    // Initial loading state (with spinner)
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                            .scaleEffect(0.8)
+                        Text(isAIEnabled ? Localization.string(for: "loading_ai") : Localization.string(for: "loading_translating"))
+                            .font(.system(.caption, design: .default))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
                 }
             }
         }
@@ -91,6 +99,7 @@ struct TranslationView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
         )
+        .textSelection(.enabled) // Enable user text selection and copy
     }
 }
 
@@ -100,6 +109,9 @@ class TranslationPanel: NSPanel {
     static let shared = TranslationPanel()
     
     private var hostingView: NSHostingView<TranslationView>?
+    private var dismissTimer: Timer?
+    private var isMouseLocked = false
+    private var lockMonitorTimer: Timer?
     
     private init() {
         super.init(
@@ -122,6 +134,9 @@ class TranslationPanel: NSPanel {
     
     /// Display the floating window at target screen position
     func show(at screenPoint: NSPoint, word: String, context: String, googleResult: String?, aiResult: String?, aiEnabled: Bool) {
+        cancelDismissRequest()
+        isMouseLocked = false
+        
         let view = TranslationView(
             word: word,
             contextText: context,
@@ -174,8 +189,74 @@ class TranslationPanel: NSPanel {
         }
     }
     
-    /// Fade out and hide the floating window
+    /// Requests dismissal of the panel with a smart delay
+    func requestDismiss() {
+        guard self.isVisible else { return }
+        
+        // If the mouse is already inside and locked, keep it visible
+        if isMouseLocked {
+            let mouseLocation = NSEvent.mouseLocation
+            if self.frame.contains(mouseLocation) {
+                return
+            } else {
+                isMouseLocked = false // Mouse left the panel area
+            }
+        }
+        
+        dismissTimer?.invalidate()
+        
+        var ticks = 0
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+            guard let self = self else { return }
+            
+            let mouseLocation = NSEvent.mouseLocation
+            if self.isVisible && self.frame.contains(mouseLocation) {
+                // Mouse entered the panel! Lock it and cancel dismiss.
+                self.isMouseLocked = true
+                timer.invalidate()
+                self.dismissTimer = nil
+                
+                self.startLockMonitoring()
+                return
+            }
+            
+            ticks += 1
+            if ticks >= 6 { // 6 * 0.05s = 0.3s
+                timer.invalidate()
+                self.dismissTimer = nil
+                self.dismiss()
+            }
+        }
+    }
+    
+    private func startLockMonitoring() {
+        lockMonitorTimer?.invalidate()
+        lockMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+            guard let self = self else { return }
+            
+            let mouseLocation = NSEvent.mouseLocation
+            if !self.isVisible || !self.frame.contains(mouseLocation) {
+                self.isMouseLocked = false
+                timer.invalidate()
+                self.lockMonitorTimer = nil
+                self.dismiss()
+            }
+        }
+    }
+    
+    /// Cancels any pending dismiss request
+    func cancelDismissRequest() {
+        dismissTimer?.invalidate()
+        dismissTimer = nil
+        lockMonitorTimer?.invalidate()
+        lockMonitorTimer = nil
+    }
+    
+    /// Fade out and hide the floating window (Immediate dismissal)
     func dismiss() {
+        cancelDismissRequest()
+        isMouseLocked = false
+        
         guard self.isVisible && self.alphaValue > 0 else { return }
         
         NSAnimationContext.runAnimationGroup({ context in

@@ -1,6 +1,7 @@
 import Cocoa
 import CoreGraphics
 
+@MainActor
 class HotKeyHandler {
     static let shared = HotKeyHandler()
     
@@ -8,6 +9,7 @@ class HotKeyHandler {
     private var lastMouseLocation: NSPoint = .zero
     private var hoverDuration: Double = 0.0
     private var lastTranslatedLocation: NSPoint = .zero
+    private var wasModifierPressed = false
     
     /// Triggered when the mouse is stationary with modifier key held down for the delay duration.
     var onHoverTriggered: ((NSPoint) -> Void)?
@@ -24,7 +26,9 @@ class HotKeyHandler {
         stopMonitoring() // Avoid duplicates
         // Check mouse and key status every 100ms system-wide
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.checkMouseAndKeyStatus()
+            MainActor.assumeIsolated {
+                self?.checkMouseAndKeyStatus()
+            }
         }
     }
     
@@ -100,9 +104,13 @@ class HotKeyHandler {
             }
             // Reset translation location on key release so the user can immediately re-translate the same word
             lastTranslatedLocation = .zero
-            onModifierReleased?()
+            
+            if wasModifierPressed {
+                onModifierReleased?()
+            }
         }
         
+        wasModifierPressed = isModifierPressed
         lastMouseLocation = currentMouseLoc
     }
     
