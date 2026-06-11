@@ -82,7 +82,7 @@ class TranslationService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 3.0 // Low timeout for quick failover
+        request.timeoutInterval = 10.0 // Increased timeout for proxy networks
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", forHTTPHeaderField: "User-Agent")
         
         do {
@@ -178,7 +178,7 @@ class TranslationService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 6.0
+        request.timeoutInterval = 30.0
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = httpBody
         
@@ -230,7 +230,7 @@ class TranslationService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 6.0
+        request.timeoutInterval = 30.0
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = httpBody
