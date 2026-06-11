@@ -101,12 +101,10 @@ class TranslationService {
                             fullTranslation += translatedSegment
                         }
                         
-                        // Parse transliteration/phonetic if present
-                        if partArray.count >= 3 && partArray[0] is NSNull && partArray[1] is NSNull {
-                            if partArray.count >= 4, let srcTrans = partArray[3] as? String {
+                        // Parse transliteration/phonetic of the source word if present (always at index 3)
+                        if partArray.count >= 4 && partArray[0] is NSNull && partArray[1] is NSNull {
+                            if let srcTrans = partArray[3] as? String {
                                 phonetic = srcTrans
-                            } else if let tgtTrans = partArray[2] as? String {
-                                phonetic = tgtTrans
                             }
                         }
                     }
