@@ -44,19 +44,9 @@ It combines the speed of local OCR and instant translation APIs with the semanti
 > [!IMPORTANT]
 > The app is code-signed using ad-hoc signing (`codesign --sign -`) in the build pipeline. This ensures macOS correctly displays the application inside the Privacy & Security preferences list.
 
----
-
-### ⚙️ Translation & Proxy-Free Settings for China Users
-
-Due to internet restrictions in mainland China, direct calls to official Google Translate and Gemini/OpenAI API endpoints might timeout. PointTrans provides two native solutions to run 100% proxy-free:
-1. **Custom Google Mirror**: You can input a custom, unblocked Google Translate mirror URL in the General Settings tab.
-2. **Domestic AI Provider (DeepSeek)**: Go to **AI Translation** tab, enable AI, select **OpenAI compatible provider**, and fill in:
-   - **Endpoint**: `https://api.deepseek.com/v1/chat/completions` (or other domestic API endpoint)
-   - **API Key**: *Your DeepSeek API key*
-   - **Model**: `deepseek-chat`
-   This setup connects directly and swiftly in mainland China without any proxy or VPN.
 
 ---
+
 
 ### 🛠️ Building from Source
 
@@ -118,19 +108,9 @@ This generates `PointTrans.dmg` in the repository root.
 > [!IMPORTANT]
 > 应用在构建打包时已通过 ad-hoc 签名（`codesign --sign -`），确保其能成功在 macOS 隐私与安全性设置的“屏幕录制”列表中注册并显示。
 
----
-
-### ⚙️ 中国区无代理（科学上网）直连配置
-
-若您在大陆地区使用且没有开启代理：
-1. **快速翻译**：可以在设置的“常规”页面，填写可用的 Google 翻译国内镜像源。
-2. **AI 语境翻译**：在“AI 翻译”页面，开启 AI，选择 **OpenAI 兼容接口**，并填写：
-   - **API 节点**：`https://api.deepseek.com/v1/chat/completions` (DeepSeek)
-   - **API Key**：*您的 DeepSeek Key*
-   - **模型**：`deepseek-chat`
-   此配置可在中国大陆无代理环境下高速直连使用。
 
 ---
+
 
 ### 🛠️ 源码编译
 
