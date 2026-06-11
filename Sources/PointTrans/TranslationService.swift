@@ -258,6 +258,29 @@ class TranslationService {
         }
     }
     
+    /// Tests connection to the selected AI provider with a simple prompt
+    func testConnection() async -> (success: Bool, message: String) {
+        let provider = UserDefaults.standard.string(forKey: "aiProvider") ?? "gemini"
+        let prompt = "Respond with only one word: OK"
+        
+        let result: String?
+        if provider == "gemini" {
+            result = await callGeminiAPI(prompt: prompt)
+        } else {
+            result = await callOpenAIAPI(prompt: prompt)
+        }
+        
+        guard let res = result else {
+            return (false, "Timeout or no response / 超时或无响应")
+        }
+        
+        if res.contains("⚠️") || res.contains("Error") || res.contains("error") || res.contains("offline") || res.contains("fail") {
+            return (false, res)
+        }
+        
+        return (true, res)
+    }
+    
     private func jsonObject(data: Data) -> [String: Any]? {
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }

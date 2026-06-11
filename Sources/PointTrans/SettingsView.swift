@@ -101,6 +101,9 @@ struct AITab: View {
     @AppStorage("openaiEndpoint") private var openaiEndpoint = "https://api.openai.com/v1/chat/completions"
     @AppStorage("openaiModel") private var openaiModel = "gpt-4o-mini"
 
+    @State private var isTesting = false
+    @State private var testStatus: String? = nil
+
     var body: some View {
         Form {
             Section(Localization.string(for: "ai_section")) {
@@ -135,9 +138,74 @@ struct AITab: View {
                         TextField(Localization.string(for: "ai_model"), text: $openaiModel)
                     }
                 }
+
+                Section {
+                    Button(action: runConnectionTest) {
+                        HStack {
+                            Spacer()
+                            if isTesting {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .scaleEffect(0.8)
+                                    .padding(.trailing, 4)
+                                Text("正在测试连接...")
+                            } else {
+                                Text("测试连接 / Test Connection")
+                            }
+                            Spacer()
+                        }
+                    }
+                    .disabled(isTesting || (aiProvider == "gemini" ? geminiApiKey.isEmpty : openaiApiKey.isEmpty))
+
+                    if let status = testStatus {
+                        HStack {
+                            Spacer()
+                            if status.hasPrefix("success") {
+                                Label("连接成功 / Connection Successful", systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Label("连接失败 / Connection Failed", systemImage: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                            }
+                            Spacer()
+                        }
+                        .padding(.top, 4)
+
+                        if !status.hasPrefix("success") {
+                            Text(status.replacingOccurrences(of: "error: ⚠️", with: "").replacingOccurrences(of: "error:", with: ""))
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
             }
         }
         .formStyle(.grouped)
+        .onChange(of: aiProvider) { _, _ in testStatus = nil }
+        .onChange(of: geminiApiKey) { _, _ in testStatus = nil }
+        .onChange(of: openaiApiKey) { _, _ in testStatus = nil }
+        .onChange(of: openaiEndpoint) { _, _ in testStatus = nil }
+        .onChange(of: openaiModel) { _, _ in testStatus = nil }
+    }
+
+    private func runConnectionTest() {
+        isTesting = true
+        testStatus = nil
+
+        Task {
+            let (success, message) = await TranslationService.shared.testConnection()
+            await MainActor.run {
+                isTesting = false
+                if success {
+                    testStatus = "success"
+                } else {
+                    testStatus = "error: \(message)"
+                }
+            }
+        }
     }
 }
 
