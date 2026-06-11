@@ -243,8 +243,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             word: word,
             context: context,
             googleResult: nil,
+            phonetic: nil,
             aiResult: nil,
-            aiEnabled: isAiEnabled
+            aiEnabled: isAiEnabled,
+            direction: activeMode
         )
         
         // 4. Fetch translations asynchronously in background task (runs on MainActor)
@@ -257,9 +259,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 TranslationPanel.shared.update(
                     word: word,
                     context: context,
-                    googleResult: googleTrans,
+                    googleResult: googleTrans?.translation,
+                    phonetic: googleTrans?.phonetic,
                     aiResult: nil,
-                    aiEnabled: isAiEnabled
+                    aiEnabled: isAiEnabled,
+                    direction: activeMode
                 )
             }
             
@@ -272,9 +276,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     TranslationPanel.shared.update(
                         word: word,
                         context: context,
-                        googleResult: googleTrans,
+                        googleResult: googleTrans?.translation,
+                        phonetic: googleTrans?.phonetic,
                         aiResult: aiTrans,
-                        aiEnabled: isAiEnabled
+                        aiEnabled: isAiEnabled,
+                        direction: activeMode
                     )
                 }
             }

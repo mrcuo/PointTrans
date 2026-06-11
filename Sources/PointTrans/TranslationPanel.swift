@@ -1,5 +1,30 @@
 import SwiftUI
 import AppKit
+import AVFoundation
+
+// MARK: - Speech Synthesizer Manager
+@MainActor
+class SpeechSynthesizerManager: NSObject, AVSpeechSynthesizerDelegate {
+    static let shared = SpeechSynthesizerManager()
+    private let synthesizer = AVSpeechSynthesizer()
+    
+    override init() {
+        super.init()
+        synthesizer.delegate = self
+    }
+    
+    func speak(text: String, isEnglish: Bool) {
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
+        
+        let utterance = AVSpeechUtterance(string: text)
+        let langCode = isEnglish ? "en-US" : "zh-CN"
+        utterance.voice = AVSpeechSynthesisVoice(language: langCode)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.95
+        synthesizer.speak(utterance)
+    }
+}
 
 // MARK: - Visual Effect View (Frosted Glass Backdrop)
 struct VisualEffectView: NSViewRepresentable {
@@ -22,16 +47,38 @@ struct TranslationView: View {
     let word: String
     let contextText: String
     let googleTranslation: String?
+    let phonetic: String?
     let aiTranslation: String?
     let isAIEnabled: Bool
+    let direction: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Word and badge header
-            HStack(alignment: .firstTextBaseline) {
-                Text(word)
-                    .font(.system(.headline, design: .default))
-                    .foregroundColor(.primary)
+            // Word, Phonetic and Pronunciation header
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .center, spacing: 6) {
+                        Text(word)
+                            .font(.system(.headline, design: .default))
+                            .foregroundColor(.primary)
+                        
+                        Button(action: {
+                            SpeechSynthesizerManager.shared.speak(text: word, isEnglish: direction == "en-to-zh")
+                        }) {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(Localization.string(for: "pronounce_tooltip"))
+                    }
+                    
+                    if let phonetic = phonetic, !phonetic.isEmpty {
+                        Text(phonetic.hasPrefix("[") || phonetic.hasPrefix("/") ? phonetic : "[\(phonetic)]")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
                 Spacer()
                 
@@ -133,7 +180,7 @@ class TranslationPanel: NSPanel {
     }
     
     /// Display the floating window at target screen position
-    func show(at screenPoint: NSPoint, word: String, context: String, googleResult: String?, aiResult: String?, aiEnabled: Bool) {
+    func show(at screenPoint: NSPoint, word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, direction: String) {
         cancelDismissRequest()
         isMouseLocked = false
         
@@ -141,8 +188,10 @@ class TranslationPanel: NSPanel {
             word: word,
             contextText: context,
             googleTranslation: googleResult,
+            phonetic: phonetic,
             aiTranslation: aiResult,
-            isAIEnabled: aiEnabled
+            isAIEnabled: aiEnabled,
+            direction: direction
         )
         
         if let existing = hostingView {
@@ -268,15 +317,17 @@ class TranslationPanel: NSPanel {
     }
     
     /// Update the SwiftUI content inside the visible window
-    func update(word: String, context: String, googleResult: String?, aiResult: String?, aiEnabled: Bool) {
+    func update(word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, direction: String) {
         guard self.isVisible else { return }
         
         let view = TranslationView(
             word: word,
             contextText: context,
             googleTranslation: googleResult,
+            phonetic: phonetic,
             aiTranslation: aiResult,
-            isAIEnabled: aiEnabled
+            isAIEnabled: aiEnabled,
+            direction: direction
         )
         self.hostingView?.rootView = view
         

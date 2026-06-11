@@ -1,5 +1,10 @@
 import Foundation
 
+struct GoogleTranslationResult {
+    let translation: String
+    let phonetic: String?
+}
+
 class TranslationService {
     
     static let shared = TranslationService()
@@ -62,7 +67,7 @@ class TranslationService {
     
     /// Translates a word using Google Translate (instant web API).
     /// If request fails due to network/firewall blocks, falls back to the local offline dictionary.
-    func translateWithGoogle(word: String, direction: String) async -> String? {
+    func translateWithGoogle(word: String, direction: String) async -> GoogleTranslationResult? {
         let trimmedWord = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedWord.isEmpty else { return nil }
         
@@ -71,7 +76,7 @@ class TranslationService {
         
         let endpoint = "https://translate.googleapis.com"
         guard let encodedWord = trimmedWord.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(endpoint)/translate_a/single?client=gtx&sl=\(sl)&tl=\(tl)&dt=t&q=\(encodedWord)") else {
+              let url = URL(string: "\(endpoint)/translate_a/single?client=gtx&sl=\(sl)&tl=\(tl)&dt=t&dt=rm&q=\(encodedWord)") else {
             return nil
         }
         
@@ -83,20 +88,35 @@ class TranslationService {
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             
-            // Google Translate response format is: [[["translation", "original", null, null, 1]], null, "en"]
+            // Google Translate response format (with dt=rm) is: [[["translation", "original", null, null, 1], [null, null, "targetTranslit", "sourceTranslit"]], null, "en"]
             if let json = try JSONSerialization.jsonObject(with: data) as? [Any],
                let firstArray = json.first as? [Any] {
                 
                 var fullTranslation = ""
+                var phonetic: String? = nil
+                
                 for part in firstArray {
-                    if let partArray = part as? [Any],
-                       let translatedSegment = partArray.first as? String {
-                        fullTranslation += translatedSegment
+                    if let partArray = part as? [Any] {
+                        if let translatedSegment = partArray.first as? String {
+                            fullTranslation += translatedSegment
+                        }
+                        
+                        // Parse transliteration/phonetic if present
+                        if partArray.count >= 3 && partArray[0] is NSNull && partArray[1] is NSNull {
+                            if partArray.count >= 4, let srcTrans = partArray[3] as? String {
+                                phonetic = srcTrans
+                            } else if let tgtTrans = partArray[2] as? String {
+                                phonetic = tgtTrans
+                            }
+                        }
                     }
                 }
                 
                 if !fullTranslation.isEmpty {
-                    return fullTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return GoogleTranslationResult(
+                        translation: fullTranslation.trimmingCharacters(in: .whitespacesAndNewlines),
+                        phonetic: phonetic
+                    )
                 }
             }
             throw URLError(.cannotParseResponse)
@@ -106,10 +126,16 @@ class TranslationService {
             // Try local database lookup
             if let localTrans = lookupLocal(word: word, direction: direction) {
                 let badge = Localization.string(for: "offline_local_badge")
-                return "\(badge) \(localTrans)"
+                return GoogleTranslationResult(
+                    translation: "\(badge) \(localTrans)",
+                    phonetic: nil
+                )
             }
             
-            return Localization.string(for: "net_error_google")
+            return GoogleTranslationResult(
+                translation: Localization.string(for: "net_error_google"),
+                phonetic: nil
+            )
         }
     }
     
