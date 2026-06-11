@@ -246,13 +246,49 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             phonetic: nil,
             aiResult: nil,
             aiEnabled: isAiEnabled,
-            direction: activeMode
+            isAILoading: false,
+            direction: activeMode,
+            onFetchAI: nil
         )
         
         // 4. Fetch translations asynchronously in background task (runs on MainActor)
         Task {
             // Request Google translation (non-isolated network call)
             let googleTrans = await TranslationService.shared.translateWithGoogle(word: word, direction: activeMode)
+            
+            let fetchAI: () -> Void = {
+                Task {
+                    if TranslationPanel.shared.isVisible {
+                        TranslationPanel.shared.update(
+                            word: word,
+                            context: context,
+                            googleResult: googleTrans?.translation,
+                            phonetic: googleTrans?.phonetic,
+                            aiResult: nil,
+                            aiEnabled: isAiEnabled,
+                            isAILoading: true,
+                            direction: activeMode,
+                            onFetchAI: nil
+                        )
+                    }
+                    
+                    let aiTrans = await TranslationService.shared.translateWithAI(word: word, context: context, direction: activeMode)
+                    
+                    if TranslationPanel.shared.isVisible {
+                        TranslationPanel.shared.update(
+                            word: word,
+                            context: context,
+                            googleResult: googleTrans?.translation,
+                            phonetic: googleTrans?.phonetic,
+                            aiResult: aiTrans,
+                            aiEnabled: isAiEnabled,
+                            isAILoading: false,
+                            direction: activeMode,
+                            onFetchAI: nil
+                        )
+                    }
+                }
+            }
             
             // Resumes on MainActor automatically
             if TranslationPanel.shared.isVisible {
@@ -263,26 +299,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     phonetic: googleTrans?.phonetic,
                     aiResult: nil,
                     aiEnabled: isAiEnabled,
-                    direction: activeMode
+                    isAILoading: false,
+                    direction: activeMode,
+                    onFetchAI: fetchAI
                 )
-            }
-            
-            // Request AI deep context translation (if enabled)
-            if isAiEnabled && TranslationPanel.shared.isVisible {
-                let aiTrans = await TranslationService.shared.translateWithAI(word: word, context: context, direction: activeMode)
-                
-                // Resumes on MainActor automatically
-                if TranslationPanel.shared.isVisible {
-                    TranslationPanel.shared.update(
-                        word: word,
-                        context: context,
-                        googleResult: googleTrans?.translation,
-                        phonetic: googleTrans?.phonetic,
-                        aiResult: aiTrans,
-                        aiEnabled: isAiEnabled,
-                        direction: activeMode
-                    )
-                }
             }
         }
     }

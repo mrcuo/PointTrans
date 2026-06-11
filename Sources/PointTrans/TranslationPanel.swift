@@ -50,7 +50,9 @@ struct TranslationView: View {
     let phonetic: String?
     let aiTranslation: String?
     let isAIEnabled: Bool
+    let isAILoading: Bool
     let direction: String
+    var onFetchAI: (() -> Void)? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -111,7 +113,7 @@ struct TranslationView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(maxHeight: 180) // Constrain scroll height for lightness
-                        } else {
+                        } else if isAILoading {
                             HStack(spacing: 6) {
                                 ProgressView()
                                     .controlSize(.small)
@@ -121,6 +123,23 @@ struct TranslationView: View {
                                     .foregroundColor(.secondary)
                             }
                             .padding(.top, 4)
+                        } else {
+                            Button(action: {
+                                onFetchAI?()
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "sparkles")
+                                    Text(Localization.string(for: "ai_translation_button"))
+                                }
+                                .font(.system(.caption, design: .default))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.accentColor.opacity(0.1))
+                                .foregroundColor(.accentColor)
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
                         }
                     }
                 } else {
@@ -129,7 +148,7 @@ struct TranslationView: View {
                         ProgressView()
                             .controlSize(.small)
                             .scaleEffect(0.8)
-                        Text(isAIEnabled ? Localization.string(for: "loading_ai") : Localization.string(for: "loading_translating"))
+                        Text(Localization.string(for: "loading_translating"))
                             .font(.system(.caption, design: .default))
                             .foregroundColor(.secondary)
                     }
@@ -180,7 +199,7 @@ class TranslationPanel: NSPanel {
     }
     
     /// Display the floating window at target screen position
-    func show(at screenPoint: NSPoint, word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, direction: String) {
+    func show(at screenPoint: NSPoint, word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, isAILoading: Bool, direction: String, onFetchAI: (() -> Void)? = nil) {
         cancelDismissRequest()
         isMouseLocked = false
         
@@ -191,7 +210,9 @@ class TranslationPanel: NSPanel {
             phonetic: phonetic,
             aiTranslation: aiResult,
             isAIEnabled: aiEnabled,
-            direction: direction
+            isAILoading: isAILoading,
+            direction: direction,
+            onFetchAI: onFetchAI
         )
         
         if let existing = hostingView {
@@ -317,7 +338,7 @@ class TranslationPanel: NSPanel {
     }
     
     /// Update the SwiftUI content inside the visible window
-    func update(word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, direction: String) {
+    func update(word: String, context: String, googleResult: String?, phonetic: String?, aiResult: String?, aiEnabled: Bool, isAILoading: Bool, direction: String, onFetchAI: (() -> Void)? = nil) {
         guard self.isVisible else { return }
         
         let view = TranslationView(
@@ -327,7 +348,9 @@ class TranslationPanel: NSPanel {
             phonetic: phonetic,
             aiTranslation: aiResult,
             isAIEnabled: aiEnabled,
-            direction: direction
+            isAILoading: isAILoading,
+            direction: direction,
+            onFetchAI: onFetchAI
         )
         self.hostingView?.rootView = view
         

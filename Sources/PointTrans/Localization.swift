@@ -23,6 +23,7 @@ struct Localization {
             "loading_ai": ["zh": "正在翻译及分析语境...", "en": "Translating & analyzing context..."],
             "no_permission": ["zh": "未启用屏幕录制权限", "en": "Screen Recording Permission Disabled"],
             "no_permission_desc": ["zh": "PointTrans 需要屏幕录制权限来识别屏幕上的单词。\n请点击菜单栏图标 -> 设置 -> 系统权限 选项卡，按提示授予权限。", "en": "PointTrans requires screen recording permission to parse words on the screen.\nPlease click the menu bar icon -> Settings -> System Permissions, and grant permission."],
+            "ai_translation_button": ["zh": "AI 语境翻译", "en": "AI Translation"],
             
             // Menu Items
             "menu_enable": ["zh": "启用翻译功能", "en": "Enable Translation"],
