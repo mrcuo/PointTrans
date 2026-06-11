@@ -68,7 +68,7 @@ struct GeneralTab: View {
                         Text(Localization.string(for: "general_delay"))
                         Spacer()
                         Slider(value: $hoverDelay, in: 0.1...1.5, step: 0.1)
-                            .frame(width: 120)
+                            .frame(width: 200)
                         Text(String(format: "%.1f s", hoverDelay))
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.secondary)
