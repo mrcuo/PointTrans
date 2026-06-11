@@ -207,6 +207,34 @@ struct PermissionsTab: View {
     }
 }
 
+// MARK: - Settings Window with Edit Shortcuts Support
+class SettingsWindow: NSWindow {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags == .command {
+            switch event.charactersIgnoringModifiers {
+            case "v":
+                if NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: self) { return true }
+            case "c":
+                if NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: self) { return true }
+            case "x":
+                if NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: self) { return true }
+            case "a":
+                if NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: self) { return true }
+            case "z":
+                if NSApp.sendAction(Selector(("undo:")), to: nil, from: self) { return true }
+            default:
+                break
+            }
+        } else if flags == [.command, .shift] {
+            if event.charactersIgnoringModifiers == "z" {
+                if NSApp.sendAction(Selector(("redo:")), to: nil, from: self) { return true }
+            }
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 // MARK: - Window Manager
 class SettingsWindowManager {
     static let shared = SettingsWindowManager()
@@ -223,7 +251,7 @@ class SettingsWindowManager {
         let settingsView = SettingsView()
         let hostingController = NSHostingController(rootView: settingsView)
 
-        let newWindow = NSWindow(
+        let newWindow = SettingsWindow(
             contentViewController: hostingController
         )
         newWindow.setContentSize(NSSize(width: 580, height: 400))
