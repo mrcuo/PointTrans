@@ -72,7 +72,7 @@ struct GeneralTab: View {
                         Text(String(format: "%.1f s", hoverDelay))
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.secondary)
-                            .frame(width: 35, alignment: .trailing)
+                            .frame(width: 45, alignment: .trailing)
                     }
                 }
             }
